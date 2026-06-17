@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>随机刷题答题器</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Microsoft Yahei}
+body{max-width:1100px;margin:30px auto;padding:0 15px}
+#file{width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;margin-bottom:16px}
+.msg{padding:10px;border-radius:6px;margin:12px 0;display:none}
+.ok{background:#dcfce7;color:#047857}
+.err{background:#fee2e2;color:#b91c1c}
+#main{display:none;margin-top:20px}
+.count{margin-bottom:16px}
+.q-wrap{background:#f8fafc;padding:20px;border-radius:10px;margin-bottom:20px}
+.q-title{font-size:18px;margin-bottom:15px}
+.opt{padding:11px;border:1px solid #ddd;border-radius:6px;margin:10px 0;cursor:pointer}
+.opt.selected{background:#4299e1;color:#fff}
+.opt.correct{background:#22c55e;color:#fff}
+.opt.wrong{background:#ef4444;color:#fff}
+.opt.lock{pointer-events:none;opacity:0.8}
+.result-tip{margin-top:14px;font-weight:bold}
+.btn-box{display:flex;gap:10px;margin:20px 0}
+.btn-box button{padding:9px 16px;border:none;border-radius:6px;cursor:pointer}
+#submit{background:#10b981;color:#fff}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.nav button{width:34px;height:34px;border:none;border-radius:4px}
+.nav.done{background:#22c55e;color:#fff}
+.nav.err{background:#ef4444;color:#fff}
+.nav.cur{border:2px solid #4299e1}
+</style>
+</head>
+<body>
+<h2>Excel随机刷题系统</h2>
+<input id="file" type="file" multiple accept=".xlsx,.xls">
+<div class="msg ok" id="okMsg"></div>
+<div class="msg err" id="errMsg"></div>
+<div id="main">
+<div class="count">总题：<span id="totalNum">0</span> 答对：<span id="rightNum">0</span> 答错：<span id="wrongNum">0</span></div>
+<div class="q-wrap">
+<div class="q-title" id="qText"></div>
+<div id="optionBox"></div>
+<div class="result-tip" id="tip"></div>
+</div>
+<div class="btn-box">
+<button id="prev">上一题</button>
+<button id="submit" disabled>提交本题</button>
+<button id="next">下一题</button>
+<button id="clear">清空作答</button>
+</div>
+<div class="nav" id="navBox"></div>
+</div>
+
+<script>
+// 全局变量
+let rawQuestion = [];
+let showQuestion = [];
+let userAnswer = {};
+let finish = {};
+let current = 0;
+let rightCount = 0;
+let wrongCount = 0;
+
+// DOM
+const fileInput = document.getElementById('file');
+const okMsg = document.getElementById('okMsg');
+const errMsg = document.getElementById('errMsg');
+const mainBox = document.getElementById('main');
+const totalNum = document.getElementById('totalNum');
+const rightNum = document.getElementById('rightNum');
+const wrongNum = document.getElementById('wrongNum');
+const qText = document.getElementById('qText');
+const optionBox = document.getElementById('optionBox');
+const tip = document.getElementById('tip');
+const prev = document.getElementById('prev');
+const submit = document.getElementById('submit');
+const next = document.getElementById('next');
+const clear = document.getElementById('clear');
+const navBox = document.getElementById('navBox');
+
+// 数组随机打乱
+function shuffle(arr) {
+    let temp = [...arr];
+    for (let i = temp.length - 1; i > 0; i--) {
+        const r = Math.floor(Math.random() * (i + 1));
+        [temp[i], temp[r]] = [temp[r], temp[i]];
+    }
+    return temp;
+}
+
+// 提示
+function showOk(text) {
+    okMsg.style.display = 'block';
+    okMsg.innerText = text;
+    errMsg.style.display = 'none';
+}
+function showErr(text) {
+    errMsg.style.display = 'block';
+    errMsg.innerText = text;
+    okMsg.style.display = 'none';
+}
+
+// 文件读取
+fileInput.onchange = async function (e) {
+    // 重置
+    rawQuestion = [];
+    showQuestion = [];
+    userAnswer = {};
+    finish = {};
+    current = 0;
+    rightCount = 0;
+    wrongCount = 0;
+    mainBox.style.display = 'none';
+    okMsg.style.display = 'none';
+    errMsg.style.display = 'none';
+
+    const files = e.target.files;
+    let success = 0;
+    for (let f of files) {
+        try {
+            const buf = await f.arrayBuffer();
+            const wb = XLSX.read(buf);
+            const sheet = wb.Sheets[wb.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            const tempList = [];
+            // 跳过前两行标题、表头，从第三行读取数据
+            for (let i = 2; i < rows.length; i++) {
+                const row = rows[i];
+                const q = row[5] ? String(row[5]).trim() : '';
+                const ans = row[6] ? String(row[6]).trim().toUpperCase() : '';
+                if (!q || !ans) continue;
+                tempList.push({
+                    q: q,
+                    ans: ans,
+                    A: row[7] || '',
+                    B: row[8] || '',
+                    C: row[9] || '',
+                    D: row[10] || ''
+                })
+            }
+            rawQuestion.push(...tempList);
+            success++;
+        } catch (err) {
+            showErr(`文件${f.name}读取失败：${err}`);
+        }
+    }
+    if (rawQuestion.length === 0) {
+        showErr('未读取到任何有效题目，请检查表格格式');
+        return;
+    }
+    showOk(`读取成功，共${rawQuestion.length}道题目，已随机打乱顺序`);
+    // 随机打乱
+    showQuestion = shuffle(rawQuestion);
+    renderAll();
+}
+
+// 整体渲染页面
+function renderAll() {
+    mainBox.style.display = 'block';
+    totalNum.innerText = showQuestion.length;
+    renderNav();
+    renderSingle();
+    updateCount();
+}
+
+// 渲染题号导航
+function renderNav() {
+    navBox.innerHTML = '';
+    showQuestion.forEach((_, idx) => {
+        const btn = document.createElement('button');
+        btn.innerText = idx + 1;
+        btn.onclick = () => {
+            current = idx;
+            renderSingle();
+        }
+        navBox.appendChild(btn);
+    })
+    refreshNav();
+}
+
+function refreshNav() {
+    const btns = navBox.querySelectorAll('button');
+    btns.forEach((b, i) => {
+        b.className = '';
+        if (finish[i]) {
+            if (userAnswer[i] === showQuestion[i].ans) b.classList.add('done');
+            else b.classList.add('err');
+        }
+        if (i === current) b.classList.add('cur');
+    })
+}
+
+// 渲染单题
+function renderSingle() {
+    const item = showQuestion[current];
+    const isFinish = finish[current];
+    const sel = userAnswer[current];
+    qText.innerText = `第${current + 1}题：${item.q}`;
+    optionBox.innerHTML = '';
+    tip.innerText = '';
+    const opts = [
+        { k: 'A', v: item.A },
+        { k: 'B', v: item.B },
+        { k: 'C', v: item.C },
+        { k: 'D', v: item.D }
+    ]
+    opts.forEach(opt => {
+        const div = document.createElement('div');
+        div.className = 'opt';
+        div.innerText = `${opt.k}. ${opt.v}`;
+        if (isFinish) div.classList.add('lock');
+        if (sel === opt.k) div.classList.add('selected');
+        if (isFinish) {
+            if (opt.k === item.ans) div.classList.add('correct');
+            else if (sel === opt.k) div.classList.add('wrong');
+        }
+        if (!isFinish) {
+            div.onclick = () => {
+                userAnswer[current] = opt.k;
+                renderSingle();
+            }
+        }
+        optionBox.appendChild(div);
+    })
+    submit.disabled = !sel || isFinish;
+    if (isFinish) {
+        tip.innerText = sel === item.ans ? '✅ 回答正确' : `❌ 正确答案：${item.ans}`;
+    }
+}
+
+// 更新统计
+function updateCount() {
+    rightNum.innerText = rightCount;
+    wrongNum.innerText = wrongCount;
+}
+
+// 上一题
+prev.onclick = () => {
+    if (current > 0) {
+        current--;
+        renderSingle();
+    }
+}
+// 下一题
+next.onclick = () => {
+    if (current < showQuestion.length - 1) {
+        current++;
+        renderSingle();
+    }
+}
+
+// 提交本题
+submit.onclick = () => {
+    const item = showQuestion[current];
+    const sel = userAnswer[current];
+    finish[current] = true;
+    if (sel === item.ans) rightCount++;
+    else wrongCount++;
+    updateCount();
+    refreshNav();
+    renderSingle();
+    setTimeout(() => {
+        if (current < showQuestion.length - 1) {
+            current++;
+            renderSingle();
+        }
+    }, 800)
+}
+
+// 清空记录
+clear.onclick = () => {
+    if (!confirm('确定清空所有作答？')) return;
+    userAnswer = {};
+    finish = {};
+    current = 0;
+    rightCount = 0;
+    wrongCount = 0;
+    updateCount();
+    refreshNav();
+    renderSingle();
+}
+</script>
+</body>
+</html>
