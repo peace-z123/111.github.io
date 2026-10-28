@@ -1,698 +1,79 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>📚 Excel 随机刷题系统</title>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简易网页采集工具（仅测试公开数据）</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif;
-            background: #f0f4f8;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 24px;
-        }
-        .app-container {
-            max-width: 900px;
-            width: 100%;
-            background: #ffffff;
-            border-radius: 28px;
-            box-shadow: 0 20px 60px rgba(0, 20, 50, 0.12);
-            overflow: hidden;
-            padding: 32px 36px 28px;
-            transition: all 0.2s;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-            gap: 12px;
-        }
-        .header h1 {
-            font-size: 26px;
-            font-weight: 700;
-            color: #1a2b4a;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .header h1 span {
-            background: #eef3fc;
-            padding: 2px 12px;
-            border-radius: 40px;
-            font-size: 14px;
-            color: #2c5f8a;
-        }
-        .stats {
-            display: flex;
-            gap: 18px;
-            flex-wrap: wrap;
-            background: #f7faff;
-            padding: 6px 18px 6px 20px;
-            border-radius: 40px;
-            border: 1px solid #e6edf6;
-        }
-        .stats .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 14px;
-            color: #2c3e5c;
-        }
-        .stats .stat-item .num {
-            font-weight: 700;
-            font-size: 16px;
-            min-width: 24px;
-        }
-        .stats .stat-item .num.green { color: #1f8b4c; }
-        .upload-area {
-            border: 2px dashed #cbdbe9;
-            border-radius: 18px;
-            padding: 28px 20px 26px;
-            text-align: center;
-            background: #fafcff;
-            margin-bottom: 24px;
-            transition: border-color 0.25s;
-            cursor: pointer;
-            position: relative;
-        }
-        .upload-area:hover { border-color: #7aa9d9; background: #f4f9ff; }
-        .upload-area.dragover { border-color: #2a7de1; background: #eaf3fe; }
-        .upload-area .icon { font-size: 40px; margin-bottom: 6px; }
-        .upload-area p { color: #3d5775; font-size: 15px; margin: 4px 0; }
-        .upload-area .sub { font-size: 13px; color: #7a93b0; margin-top: 2px; }
-        .file-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px 14px;
-            margin-top: 12px;
-            justify-content: center;
-        }
-        .file-list .tag {
-            background: #e8eff8;
-            border-radius: 30px;
-            padding: 4px 14px 4px 16px;
-            font-size: 13px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: #1f4973;
-        }
-        .file-list .tag .del {
-            cursor: pointer;
-            color: #b0c8df;
-            font-weight: bold;
-            font-size: 16px;
-        }
-        .file-list .tag .del:hover { color: #c0392b; }
-        .btn-group {
-            display: flex;
-            gap: 12px;
-            margin: 16px 0 8px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 24px;
-            border-radius: 40px;
-            font-weight: 600;
-            font-size: 15px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: #eaf0f8;
-            color: #1f3a5f;
-        }
-        .btn-primary { background: #1f5f9e; color: #fff; }
-        .btn-primary:hover { background: #164a7a; transform: translateY(-1px); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .btn-success { background: #1f8b4c; color: #fff; }
-        .btn-outline { background: transparent; border: 1.5px solid #c5d6e8; color: #2a4a6e; }
-        .btn-outline:hover { background: #ecf3fc; }
-        .btn-danger-outline { border: 1.5px solid #f5c6cb; color: #a94442; background: transparent; }
-        .btn-sm { padding: 4px 14px; font-size: 13px; }
-        .progress-bar-wrap {
-            width: 100%;
-            height: 6px;
-            background: #e6edf6;
-            border-radius: 10px;
-            margin: 12px 0 4px;
-            overflow: hidden;
-        }
-        .progress-bar-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #2a7de1, #5b9ee6);
-            transition: width 0.35s ease;
-        }
-        .question-card {
-            background: #fafcff;
-            border-radius: 20px;
-            padding: 24px 28px 20px;
-            border: 1px solid #e6edf6;
-            margin: 8px 0 16px;
-            min-height: 240px;
-        }
-        .q-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 14px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .q-badge {
-            display: inline-block;
-            padding: 3px 16px;
-            border-radius: 30px;
-            font-size: 13px;
-            font-weight: 600;
-            background: #dfe9f5;
-        }
-        .q-badge.单选 { background: #d4e2fc; color: #1a4f8b; }
-        .q-badge.多选 { background: #d6f0e6; color: #0f6e44; }
-        .q-badge.判断 { background: #fce9d4; color: #a5672a; }
-        .q-progress { font-size: 14px; color: #4d6a8a; }
-        .q-text { font-size: 18px; line-height: 1.7; color: #142433; margin-bottom: 20px; font-weight: 500; }
-        .options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-        .option-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 16px;
-            border-radius: 12px;
-            background: #fff;
-            border: 1.5px solid #e0e9f2;
-            cursor: pointer;
-            font-size: 15px;
-        }
-        .option-item:hover { background: #f4f9ff; border-color: #b8d0e8; }
-        .option-item .label { font-weight: 600; min-width: 24px; color: #3d5f82; }
-        .option-item.selected { border-color: #1f5f9e; background: #e6f0fe; }
-        .option-item.correct { border-color: #1f8b4c; background: #e3f5ea; }
-        .option-item.wrong { border-color: #d9534f; background: #fde8e7; }
-        .option-item.disabled { cursor: default; opacity: 0.85; }
-        .feedback {
-            margin-top: 16px;
-            padding: 14px 20px;
-            border-radius: 14px;
-            font-size: 15px;
-            display: none;
-            align-items: center;
-            gap: 12px;
-        }
-        .feedback.show { display: flex; }
-        .feedback.correct { background: #e3f5ea; border: 1px solid #b7dfc9; color: #0f6e44; }
-        .feedback.wrong { background: #fde8e7; border: 1px solid #f5c6cb; color: #a94442; }
-        .nav-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 6px;
-        }
-        .nav-bar .left, .nav-bar .right { display: flex; gap: 8px; align-items: center; }
-        .jump-input {
-            width: 60px;
-            padding: 5px 8px;
-            border-radius: 30px;
-            border: 1.5px solid #d5e0ec;
-            text-align: center;
-            font-size: 14px;
-        }
-        .empty-state { text-align: center; padding: 40px 10px 30px; color: #5d7a9a; }
-        .empty-state .big-icon { font-size: 56px; margin-bottom: 10px; }
-        .empty-state h3 { font-size: 20px; color: #1a2b4a; margin-bottom: 6px; }
-        .loading-tip { text-align: center; color: #2a7de1; font-size:14px; margin-top:8px; display:none; }
-        .loading-tip.show { display:block; }
-        @media (max-width: 680px) {
-            .app-container { padding: 20px 16px; }
-            .header h1 { font-size: 20px; }
-            .question-card { padding: 18px 16px; }
-            .q-text { font-size: 16px; }
-        }
+        *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui}
+        body{padding:20px;max-width:1200px;margin:0 auto;background:#f5f7fa}
+        .card{background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 10px #00000012;margin-bottom:16px}
+        .row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+        input,select,button,textarea{padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px}
+        input{flex:1;min-width:260px}
+        button{cursor:pointer;background:#2563eb;color:#fff;border:none}
+        button:disabled{background:#94a3b8;cursor:not-allowed}
+        textarea{width:100%;min-height:220px;margin-top:10px;font-family:monospace}
+        .tip{color:#dc2626;font-size:13px;margin:8px 0}
+        .success{color:#16a34a}
     </style>
 </head>
 <body>
-    <div class="app-container" id="app">
-        <div class="header">
-            <h1>📚 刷题系统 <span>Excel</span></h1>
-            <div class="stats" id="statsBar">
-                <span class="stat-item">📝 总题 <span class="num" id="totalCount">0</span></span>
-                <span class="stat-item">✅ 已答 <span class="num" id="answeredCount">0</span></span>
-                <span class="stat-item">🎯 正确率 <span class="num green" id="accuracy">0%</span></span>
-            </div>
+    <div class="card">
+        <h2>简易在线采集器（前端版）</h2>
+        <p class="tip">⚠️ 仅用于测试允许公开访问、允许跨域的数据；受浏览器跨域限制，大部分网站会失败；爬虫请遵守法律法规与网站协议</p>
+        <div class="row">
+            <input id="targetUrl" placeholder="输入要抓取的网址，例如 https://xxx.com/api/data">
+            <select id="method">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+            </select>
+            <button id="fetchBtn">开始抓取</button>
         </div>
-        <div class="upload-area" id="uploadArea">
-            <span class="icon">📂</span>
-            <p><strong>点击区域上传</strong> 或拖拽Excel文件(.xlsx/.xls)</p>
-            <p class="sub">多文件自动合并题库</p>
-            <div class="file-list" id="fileList"></div>
-            <div class="loading-tip" id="loadingTip">⏳ 文件解析中...</div>
+        <div class="row">
+            <label>POST参数(json)：</label>
+            <textarea id="postBody" placeholder='{"name":"test"}'></textarea>
         </div>
-        <div class="btn-group">
-            <button class="btn btn-primary" id="startBtn">🚀 开始刷题</button>
-            <button class="btn btn-outline btn-sm" id="resetBtn">🔄 重置全部</button>
-            <button class="btn btn-danger-outline btn-sm" id="clearAllFileBtn">清空所有文件</button>
-        </div>
-        <div class="progress-bar-wrap">
-            <div class="progress-bar-fill" id="progressFill"></div>
-        </div>
-        <div id="questionArea">
-            <div class="empty-state" id="emptyState">
-                <span class="big-icon">📖</span>
-                <h3>暂无题目</h3>
-                <p>上传Excel后点击开始刷题</p>
-            </div>
-            <div class="question-card" id="questionCard" style="display:none;">
-                <div class="q-meta">
-                    <span class="q-badge" id="qTypeBadge">单选题</span>
-                    <span class="q-progress" id="qProgress">第1/1题</span>
-                </div>
-                <div class="q-text" id="qText">题干</div>
-                <div class="options" id="optionsContainer"></div>
-                <div class="feedback" id="feedback">
-                    <span id="feedbackIcon"></span>
-                    <span id="feedbackText"></span>
-                </div>
-                <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-                    <button class="btn btn-success" id="submitBtn">📤 提交答案</button>
-                    <button class="btn btn-outline btn-sm" id="showAnswerBtn">👁 显示答案</button>
-                    <button class="btn btn-outline btn-sm" id="hideAnswerBtn" style="display:none;">🙈 隐藏答案</button>
-                </div>
-            </div>
-        </div>
-        <div class="nav-bar" id="navBar" style="display:none;">
-            <div class="left">
-                <button class="btn btn-outline btn-sm" id="prevBtn">◀ 上一题</button>
-                <span>第 <span id="navCurrent">1</span>/<span id="navTotal">1</span></span>
-                <button class="btn btn-outline btn-sm" id="nextBtn">下一题 ▶</button>
-            </div>
-            <div class="right">
-                <input class="jump-input" id="jumpInput" min="1" value="1">
-                <button class="btn btn-outline btn-sm" id="jumpBtn">GO</button>
-            </div>
-        </div>
-        <div style="margin-top:16px;text-align:center;font-size:13px;color:#9ab0c8;border-top:1px solid #ecf2f8;padding-top:14px;">
-            单选/多选/判断题自动识别 | 自动判分 | 答对自动跳转下一题
+        <div>
+            <label>返回结果：</label>
+            <textarea id="result" readonly></textarea>
         </div>
     </div>
 
-    <script>
-        (function(){
-            'use strict';
-            const $ = s => document.querySelector(s);
-            const $$ = s => document.querySelectorAll(s);
-            const uploadArea = $('#uploadArea');
-            const fileList = $('#fileList');
-            const startBtn = $('#startBtn');
-            const resetBtn = $('#resetBtn');
-            const clearAllFileBtn = $('#clearAllFileBtn');
-            const loadingTip = $('#loadingTip');
-            const totalCount = $('#totalCount');
-            const answeredCount = $('#answeredCount');
-            const accuracy = $('#accuracy');
-            const progressFill = $('#progressFill');
-            const emptyState = $('#emptyState');
-            const questionCard = $('#questionCard');
-            const qTypeBadge = $('#qTypeBadge');
-            const qProgress = $('#qProgress');
-            const qText = $('#qText');
-            const optionsContainer = $('#optionsContainer');
-            const feedback = $('#feedback');
-            const feedbackIcon = $('#feedbackIcon');
-            const feedbackText = $('#feedbackText');
-            const submitBtn = $('#submitBtn');
-            const showAnswerBtn = $('#showAnswerBtn');
-            const hideAnswerBtn = $('#hideAnswerBtn');
-            const prevBtn = $('#prevBtn');
-            const nextBtn = $('#nextBtn');
-            const navBar = $('#navBar');
-            const navCurrent = $('#navCurrent');
-            const navTotal = $('#navTotal');
-            const jumpInput = $('#jumpInput');
-            const jumpBtn = $('#jumpBtn');
+<script>
+const fetchBtn = document.getElementById('fetchBtn');
+const targetUrl = document.getElementById('targetUrl');
+const methodSel = document.getElementById('method');
+const postBody = document.getElementById('postBody');
+const resultDom = document.getElementById('result');
 
-            // 全局状态
-            let allQuestions = [];
-            let shuffled = [];
-            let currentIndex = 0;
-            let userSelections = {};
-            let answerResults = {};
-            let isAnswered = false;
-            let totalAnswered = 0;
-            let totalCorrect = 0;
-            let hasStarted = false;
-            window.justViewAnswer = false;
-            let isParsingFile = false;
-            let uploadedFiles = [];
+// 公共CORS代理，仅用于学习测试，不稳定，随时失效
+const proxy = "https://corsproxy.io/?";
 
-            // 工具
-            function shuffleArray(arr) {
-                for(let i=arr.length-1;i>0;i--){
-                    const j = Math.floor(Math.random()*(i+1));
-                    [arr[i],arr[j]] = [arr[j],arr[i]];
-                }
-                return arr;
-            }
-            function normalizeAnswer(ans){
-                if(!ans) return [];
-                let s = String(ans).replace(/\s/g,'');
-                return s.includes(',') ? s.split(',').map(x=>x.trim()).filter(Boolean).sort() : s.split('').filter(Boolean).sort();
-            }
-            function isAnswerEqual(u,c){
-                const a = normalizeAnswer(u),b=normalizeAnswer(c);
-                if(a.length!==b.length) return false;
-                for(let i=0;i<a.length;i++) if(a[i]!==b[i]) return false;
-                return true;
-            }
-            function getCurrentQuestion(){
-                if(!shuffled.length||currentIndex>=shuffled.length) return null;
-                return shuffled[currentIndex];
-            }
-
-            // Excel解析
-            function parseExcelFile(file){
-                return new Promise((res,rej)=>{
-                    const reader = new FileReader();
-                    reader.onload = e=>{
-                        try{
-                            const data = new Uint8Array(e.target.result);
-                            const wb = XLSX.read(data,{type:'array'});
-                            const qs = [];
-                            wb.SheetNames.forEach(name=>{
-                                const sheet = wb.Sheets[name];
-                                const rows = XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
-                                if(rows.length<2) return;
-                                let headerIdx = 0,header = rows[0].map(x=>String(x).trim());
-                                for(let i=0;i<Math.min(10,rows.length);i++){
-                                    const r = rows[i].join(' ');
-                                    if(r.includes('题型')&&r.includes('题干')){headerIdx=i;header=rows[i].map(x=>String(x).trim());break;}
-                                }
-                                const hLower = header.map(x=>x.replace(/[（()）]/g,'').toLowerCase().trim());
-                                const getIdx = kw=>{
-                                    const keys = {type:['题型'],question:['题干'],answer:['答案'],optA:['a'],optB:['b'],optC:['c'],optD:['d']};
-                                    for(let i=0;i<hLower.length;i++){
-                                        for(const k of keys[kw]) if(hLower[i].includes(k)) return i;
-                                    }
-                                    return -1;
-                                };
-                                const tIdx = getIdx('type'),qIdx=getIdx('question'),aIdx=getIdx('answer');
-                                if(tIdx===-1||qIdx===-1||aIdx===-1) return;
-                                const aA=getIdx('optA'),aB=getIdx('optB'),aC=getIdx('optC'),aD=getIdx('optD');
-                                for(let r=headerIdx+1;r<rows.length;r++){
-                                    const row = rows[r];
-                                    const type = String(row[tIdx]||'').trim();
-                                    const q = String(row[qIdx]||'').trim();
-                                    const ans = String(row[aIdx]||'').trim();
-                                    if(!type||!q||!ans) continue;
-                                    const oA=String(row[aA]||''),oB=String(row[aB]||''),oC=String(row[aC]||''),oD=String(row[aD]||'');
-                                    let qType = '单选题';
-                                    const tl = type.toLowerCase();
-                                    if(tl.includes('多选')) qType='多选题';
-                                    else if(tl.includes('判断')) qType='判断题';
-                                    let opts,labels;
-                                    if(qType==='判断题'){opts=['对','错'];labels=['A','B'];}
-                                    else {
-                                        const arr = [{l:'A',v:oA},{l:'B',v:oB},{l:'C',v:oC},{l:'D',v:oD}].filter(x=>x.v);
-                                        opts = arr.map(x=>x.v); labels = arr.map(x=>x.l);
-                                    }
-                                    qs.push({type:qType,question:q,answer:ans,options:opts,optionLabels:labels});
-                                }
-                            });
-                            res(qs);
-                        }catch(err){rej(err);}
-                    };
-                    reader.onerror = ()=>rej('读取失败');
-                    reader.readAsArrayBuffer(file);
-                });
-            }
-
-            // 全新上传逻辑，无缓存
-            async function openFilePicker(){
-                if(isParsingFile){alert('正在解析，请等待');return;}
-                const tempInput = document.createElement('input');
-                tempInput.type = 'file';
-                tempInput.multiple = true;
-                tempInput.accept = '.xlsx,.xls';
-                tempInput.onchange = async ev=>{
-                    const files = Array.from(ev.target.files).filter(f=>f.name.endsWith('.xlsx')||f.name.endsWith('.xls'));
-                    tempInput.remove();
-                    if(!files.length){alert('仅支持xlsx/xls');return;}
-                    files.forEach(f=>{
-                        const exist = uploadedFiles.some(x=>x.name===f.name&&x.size===f.size);
-                        if(!exist) uploadedFiles.push(f);
-                    });
-                    renderFileList();
-                    await parseAllFiles();
-                };
-                tempInput.click();
-            }
-
-            function handleDropFiles(files){
-                if(isParsingFile){alert('解析中，请等待');return;}
-                const arr = Array.from(files).filter(f=>f.name.match(/\.(xlsx|xls)$/));
-                if(!arr.length){alert('仅支持Excel');return;}
-                arr.forEach(f=>{
-                    const e = uploadedFiles.some(x=>x.name===f.name&&x.size===f.size);
-                    if(!e) uploadedFiles.push(f);
-                });
-                renderFileList();
-                parseAllFiles();
-            }
-
-            async function parseAllFiles(){
-                if(isParsingFile) return;
-                isParsingFile = true;
-                startBtn.disabled = true;
-                loadingTip.classList.add('show');
-                let totalQ = [];
-                try{
-                    for(const f of uploadedFiles){
-                        const q = await parseExcelFile(f);
-                        totalQ = totalQ.concat(q);
-                    }
-                    allQuestions = totalQ;
-                    updateStatsUI();
-                    if(hasStarted&&allQuestions.length>0){
-                        resetState();
-                        initQuiz();
-                    }
-                }catch(err){
-                    alert(`解析失败：${err.message}`);
-                }finally{
-                    isParsingFile = false;
-                    startBtn.disabled = false;
-                    loadingTip.classList.remove('show');
-                }
-            }
-
-            function renderFileList(){
-                if(!uploadedFiles.length){fileList.innerHTML='';return;}
-                fileList.innerHTML = uploadedFiles.map((f,i)=>`
-                    <span class="tag">📄${f.name}(${Math.round(f.size/1024)}KB)
-                    <span class="del" data-i="${i}">✕</span></span>
-                `).join('');
-                $$('.del').forEach(el=>el.onclick=e=>{
-                    e.stopPropagation();
-                    const idx = Number(el.dataset.i);
-                    uploadedFiles.splice(idx,1);
-                    renderFileList();
-                    parseAllFiles();
-                });
-            }
-
-            function clearAllUpload(){
-                uploadedFiles = [];
-                renderFileList();
-                parseAllFiles();
-            }
-
-            function updateStatsUI(){
-                const total = allQuestions.length;
-                totalCount.textContent = total;
-                answeredCount.textContent = totalAnswered;
-                const rate = totalAnswered===0 ? 0 : Math.round(totalCorrect/totalAnswered*100);
-                accuracy.textContent = rate+'%';
-                progressFill.style.width = total===0 ? '0%' : Math.round(totalAnswered/total*100)+'%';
-            }
-
-            function showEmpty(){
-                emptyState.style.display = 'block';
-                questionCard.style.display = 'none';
-                navBar.style.display = 'none';
-                updateStatsUI();
-            }
-
-            function showQuestion(idx){
-                if(!shuffled.length){showEmpty();return;}
-                idx = Math.max(0,Math.min(idx,shuffled.length-1));
-                currentIndex = idx;
-                feedback.classList.remove('show');
-                window.justViewAnswer = false;
-                hideAnswerBtn.style.display = 'none';
-                showAnswerBtn.style.display = 'inline-flex';
-                emptyState.style.display = 'none';
-                questionCard.style.display = 'block';
-                navBar.style.display = 'flex';
-                const q = getCurrentQuestion();
-                const map = {'单选题':'单选','多选题':'多选','判断题':'判断'};
-                qTypeBadge.className = 'q-badge '+map[q.type];
-                qTypeBadge.textContent = q.type;
-                qProgress.textContent = `第${currentIndex+1}/${shuffled.length}题`;
-                qText.textContent = q.question;
-                optionsContainer.innerHTML = '';
-                const multi = q.type==='多选题';
-                const sel = userSelections[currentIndex];
-                const done = answerResults[currentIndex]!==undefined;
-                isAnswered = done;
-                q.options.forEach((opt,i)=>{
-                    const l = q.optionLabels[i];
-                    const div = document.createElement('div');
-                    div.className = 'option-item';
-                    div.dataset.label = l;
-                    div.innerHTML = `<span class="label">${l}.</span><span class="text">${opt}</span>`;
-                    if(sel!==null){
-                        if(multi){
-                            if(Array.isArray(sel)&&sel.includes(l)) div.classList.add('selected');
-                        }else if(sel===l) div.classList.add('selected');
-                    }
-                    if(done){
-                        div.classList.add('disabled');
-                        const correct = normalizeAnswer(q.answer);
-                        if(correct.includes(l)) div.classList.add('correct');
-                        else if((multi?sel.includes(l):sel===l)) div.classList.add('wrong');
-                    }
-                    div.onclick = ()=>{
-                        if(isAnswered) return;
-                        if(multi){
-                            let arr = Array.isArray(sel)?[...sel]:[];
-                            const pos = arr.indexOf(l);
-                            pos>-1 ? arr.splice(pos,1) : arr.push(l);
-                            userSelections[currentIndex] = arr;
-                            showQuestion(currentIndex);
-                        }else{
-                            userSelections[currentIndex] = l;
-                            showQuestion(currentIndex);
-                        }
-                    };
-                    optionsContainer.appendChild(div);
-                });
-                feedback.className = 'feedback';
-                feedbackIcon.textContent = '';
-                feedbackText.textContent = '';
-                submitBtn.disabled = isAnswered;
-                navCurrent.textContent = currentIndex+1;
-                navTotal.textContent = shuffled.length;
-                jumpInput.value = currentIndex+1;
-            }
-
-            function resetState(){
-                userSelections={};answerResults={};totalAnswered=0;totalCorrect=0;currentIndex=0;isAnswered=false;window.justViewAnswer=false;updateStatsUI();
-            }
-
-            function initQuiz(){
-                if(!allQuestions.length){alert('无题库，请上传文件');return;}
-                hasStarted = true;
-                resetState();
-                shuffled = shuffleArray([...allQuestions]);
-                uploadArea.style.display = 'none';
-                showQuestion(0);
-            }
-
-            function submitAnswer(){
-                const q = getCurrentQuestion();
-                if(!q||isAnswered) return;
-                const sel = userSelections[currentIndex];
-                if(!sel){alert('请选择答案');return;}
-                window.justViewAnswer = false;
-                const ok = isAnswerEqual(sel,q.answer);
-                answerResults[currentIndex] = ok;
-                totalAnswered++;
-                if(ok&&!answerResults[currentIndex+'_cnt']){
-                    totalCorrect++;
-                    answerResults[currentIndex+'_cnt']=true;
-                }
-                feedbackIcon.textContent = ok ? '✅' : '❌';
-                feedbackText.textContent = ok ? '回答正确！' : `正确答案：${normalizeAnswer(q.answer).join('、')}`;
-                feedback.className = 'feedback '+ (ok?'correct':'wrong');
-                feedback.classList.add('show');
-                isAnswered = true;
-                submitBtn.disabled = true;
-                showQuestion(currentIndex);
-                updateStatsUI();
-                // 修改：延时600毫秒，翻页更快
-                if(ok){
-                    setTimeout(()=>{
-                        if(currentIndex < shuffled.length-1) showQuestion(currentIndex+1);
-                        else alert('全部题目完成！');
-                    },600);
-                }
-            }
-
-            function showAns(){
-                const q = getCurrentQuestion();
-                if(!q) return;
-                window.justViewAnswer = true;
-                feedbackIcon.textContent = '📝';
-                feedbackText.textContent = `正确答案：${normalizeAnswer(q.answer).join('、')}`;
-                feedback.className = 'feedback correct';
-                feedback.classList.add('show');
-                submitBtn.disabled = true;
-                hideAnswerBtn.style.display = 'inline-flex';
-                showAnswerBtn.style.display = 'none';
-            }
-            function hideAns(){
-                feedback.classList.remove('show');
-                window.justViewAnswer = false;
-                submitBtn.disabled = false;
-                hideAnswerBtn.style.display = 'none';
-                showAnswerBtn.style.display = 'inline-flex';
-            }
-
-            // 绑定事件
-            function bind(){
-                uploadArea.onclick = openFilePicker;
-                uploadArea.ondragover = e=>{e.preventDefault();uploadArea.classList.add('dragover');};
-                uploadArea.ondragleave = ()=>uploadArea.classList.remove('dragover');
-                uploadArea.ondrop = e=>{
-                    e.preventDefault();
-                    uploadArea.classList.remove('dragover');
-                    handleDropFiles(e.dataTransfer.files);
-                };
-                startBtn.onclick = initQuiz;
-                resetBtn.onclick = ()=>{
-                    hasStarted = false; resetState(); uploadedFiles=[]; renderFileList(); allQuestions=[];shuffled=[]; showEmpty(); uploadArea.style.display='block';
-                };
-                clearAllFileBtn.onclick = clearAllUpload;
-                submitBtn.onclick = submitAnswer;
-                showAnswerBtn.onclick = showAns;
-                hideAnswerBtn.onclick = hideAns;
-                prevBtn.onclick = ()=>currentIndex>0&&showQuestion(currentIndex-1);
-                nextBtn.onclick = ()=>currentIndex<shuffled.length-1&&showQuestion(currentIndex+1);
-                jumpBtn.onclick = ()=>{
-                    const n = Number(jumpInput.value)||1;
-                    showQuestion(n-1);
-                };
-                jumpInput.onkeydown = e=>e.key==='Enter'&&jumpBtn.click();
-            }
-            bind();
-            showEmpty();
-        })();
-    </script>
+fetchBtn.onclick = async ()=>{
+    const url = targetUrl.value.trim();
+    if(!url){
+        resultDom.value = "请填写目标网址";
+        return;
+    }
+    fetchBtn.disabled = true;
+    resultDom.value = "请求中...";
+    try{
+        const reqOpt = {
+            method: methodSel.value
+        }
+        if(methodSel.value === 'POST' && postBody.value.trim()){
+            reqOpt.headers = {"Content-Type":"application/json"};
+            reqOpt.body = postBody.value.trim();
+        }
+        const res = await fetch(proxy + encodeURIComponent(url), reqOpt);
+        const text = await res.text();
+        resultDom.value = `状态码：${res.status}\n\n${text}`;
+    }catch(e){
+        resultDom.value = `请求失败：${e.message}\n\n代理可能失效，或者目标网站禁止抓取`;
+    }
+    fetchBtn.disabled = false;
+}
+</script>
 </body>
 </html>
