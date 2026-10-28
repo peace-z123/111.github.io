@@ -134,15 +134,14 @@
     <!-- 悬浮音乐播放器 -->
     <div class="music-box">
         <button id="playBtn">▶</button>
-        <div class="music-info" id="musicName">抖音热歌</div>
+        <div class="music-info" id="musicName">测试热歌</div>
         <select id="musicSelect">
-            <option value="https://music.163.com/song/media/outer/url?id=1963214521.mp3">乌梅子酱</option>
-            <option value="https://music.163.com/song/media/outer/url?id=1842421101.mp3">花海</option>
-            <option value="https://music.163.com/song/media/outer/url?id=1413504068.mp3">起风了</option>
-            <option value="https://music.163.com/song/media/outer/url?id=1868308102.mp3">人间烟火</option>
+            <option value="https://mdn.github.io/learning-area/html/multimedia-and-embedding/tasks/media-embed/media/audio.mp3">示例轻音乐1</option>
+            <option value="https://jplayer.org/audio/mp3/Miaow-01-Tempered-song.mp3">示例轻音乐2</option>
+            <option value="https://media.geeksforgeeks.org/wp-content/uploads/20241009180552641558/sample-12s.mp3">示例轻音乐3</option>
         </select>
         <input type="range" id="vol" min="0" max="1" step="0.05" value="0.6">
-        <audio id="audio">
+        <audio id="audio" preload="auto">
     </div>
 
 <script>
@@ -152,18 +151,23 @@
     const musicName = document.getElementById('musicName');
     const volInput = document.getElementById('vol');
 
-    // 默认加载第一首
+    // 加载音乐
     function loadMusic(src, name){
         audio.src = src;
         musicName.innerText = name;
     }
+    // 默认加载第一首
     loadMusic(musicSelect.value, musicSelect.options[0].text);
 
     // 播放暂停
-    playBtn.onclick = ()=>{
+    playBtn.onclick = async ()=>{
         if(audio.paused){
-            audio.play();
-            playBtn.innerText = "⏸";
+            try{
+                await audio.play();
+                playBtn.innerText = "⏸";
+            }catch(err){
+                alert("播放失败，请检查网络");
+            }
         }else{
             audio.pause();
             playBtn.innerText = "▶";
@@ -171,28 +175,35 @@
     }
 
     // 切换歌曲
-    musicSelect.onchange = ()=>{
+    musicSelect.onchange = async ()=>{
         const opt = musicSelect.options[musicSelect.selectedIndex];
         loadMusic(opt.value, opt.text);
-        audio.play();
-        playBtn.innerText = "⏸";
+        try{
+            await audio.play();
+            playBtn.innerText = "⏸";
+        }catch(e){}
     }
 
-    // 音量
+    // 音量调节
     volInput.oninput = ()=>{
         audio.volume = volInput.value;
     }
 
     // 播放结束自动切下一首
-    audio.onended = ()=>{
+    audio.onended = async ()=>{
         let idx = musicSelect.selectedIndex + 1;
         if(idx >= musicSelect.options.length) idx = 0;
         musicSelect.selectedIndex = idx;
         const opt = musicSelect.options[idx];
         loadMusic(opt.value, opt.text);
-        audio.play();
-        playBtn.innerText = "⏸";
+        try{
+            await audio.play();
+            playBtn.innerText = "⏸";
+        }catch(e){
+            playBtn.innerText = "▶";
+        }
     }
 </script>
 </body>
 </html>
+
